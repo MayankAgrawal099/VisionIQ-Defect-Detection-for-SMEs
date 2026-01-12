@@ -3,7 +3,6 @@ Database module for MongoDB operations.
 Handles defect logging, retrieval, and statistics.
 """
 
-import logging
 from datetime import datetime
 from typing import List, Dict, Optional
 import base64
@@ -13,8 +12,9 @@ from pymongo.errors import ConnectionFailure, DuplicateKeyError
 import cv2
 import numpy as np
 import config
+from logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class Database:

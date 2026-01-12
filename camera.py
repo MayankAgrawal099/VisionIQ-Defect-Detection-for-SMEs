@@ -4,11 +4,11 @@ Provides camera detection, initialization, and frame capture functionality.
 """
 
 import cv2
-import logging
 from typing import Optional, Tuple, List
 import config
+from logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class Camera:

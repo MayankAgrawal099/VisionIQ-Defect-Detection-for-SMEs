@@ -3,7 +3,6 @@ Flask application for YOLO-based defect detection system.
 Main application file with routes, video streaming, and API endpoints.
 """
 
-import logging
 import threading
 import time
 from datetime import datetime
@@ -14,16 +13,13 @@ from flask import Flask, render_template, Response, jsonify, request
 from werkzeug.serving import WSGIRequestHandler
 
 import config
+from logger import setup_logger
 from camera import Camera
 from yolo_detector import YOLODetector
 from database import Database
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Setup centralized logging
+logger = setup_logger(__name__)
 
 # Initialize Flask app
 app = Flask(__name__, template_folder=config.TEMPLATES_DIR, static_folder=config.STATIC_DIR)

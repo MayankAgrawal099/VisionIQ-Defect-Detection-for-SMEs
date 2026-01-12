@@ -5,12 +5,13 @@ Handles YOLOv8 model loading, inference, and defect classification.
 
 import cv2
 import numpy as np
-import logging
+import os
 from typing import List, Dict, Tuple, Optional
 from ultralytics import YOLO
 import config
+from logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class YOLODetector:
@@ -39,12 +40,26 @@ class YOLODetector:
             True if model loaded successfully, False otherwise
         """
         try:
+            # Check if model file exists
+            if not os.path.exists(self.model_path):
+                logger.error(f"Model file not found: {self.model_path}")
+                logger.error("Please train the model first using: python train_custom_model.py")
+                logger.error("Or update MODEL_PATH in config.py to use a pretrained model")
+                return False
+            
             logger.info(f"Loading YOLO model from: {self.model_path}")
             self.model = YOLO(self.model_path)
             logger.info("YOLO model loaded successfully")
+            
+            # Log model info
+            if hasattr(self.model, 'names'):
+                num_classes = len(self.model.names)
+                logger.info(f"Model info: {num_classes} classes detected")
+                logger.debug(f"Model classes: {list(self.model.names.values())}")
+            
             return True
         except Exception as e:
-            logger.error(f"Failed to load YOLO model: {str(e)}")
+            logger.error(f"Failed to load YOLO model: {str(e)}", exc_info=True)
             return False
     
     def detect(self, frame: np.ndarray) -> List[Dict]:
