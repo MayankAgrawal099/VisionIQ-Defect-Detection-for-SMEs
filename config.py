@@ -31,7 +31,8 @@ TEST_CAMERAS_ON_STARTUP = False
 #   - "yolov8l.pt" (large)
 #   - "yolov8x.pt" (extra large, most accurate)
 #   - Or path to your custom trained model: "path/to/best.pt"
-MODEL_PATH = "yolov8n.pt"  # Will download automatically on first use
+# After training, update this to: r"bottle_defect_dataset/runs/detect/bottle_defects/weights/best.pt"
+MODEL_PATH = r"bottle_defect_dataset/runs/detect/bottle_defects/weights/best.pt"
 
 # Confidence threshold for detections
 CONFIDENCE_THRESHOLD = 0.5
@@ -43,25 +44,22 @@ IOU_THRESHOLD = 0.45
 # DEFECT CLASS MAPPING
 # ====================
 # Map YOLO class IDs to defect types
-# NOTE: For production, you'll need a custom trained YOLO model with these classes
-# This is a demo mapping - adjust based on your trained model
+# MUST match your data.yaml class names and order
 DEFECT_CLASSES = {
-    0: "crack",
-    1: "scratch",
-    2: "missing_label",
-    3: "wrong_label",
-    4: "missing_cap",
-    5: "wrong_cap_color"
+    0: "cap",
+    1: "crumbled",
+    2: "label",
+    3: "no-cap",
+    4: "not-crumbled"
 }
 
 # Reverse mapping for display
 DEFECT_CLASS_NAMES = {
-    "crack": "Crack",
-    "scratch": "Scratch/Mark",
-    "missing_label": "Missing Label",
-    "wrong_label": "Wrong Label",
-    "missing_cap": "Missing Cap",
-    "wrong_cap_color": "Wrong Cap Color"
+    "cap": "Cap",
+    "crumbled": "Crumbled",
+    "label": "Label",
+    "no-cap": "No Cap",
+    "not-crumbled": "Not Crumbled"
 }
 
 # ====================

@@ -129,12 +129,11 @@ class YOLODetector:
         
         # Color mapping for different defect types
         colors = {
-            "crack": (0, 0, 255),  # Red
-            "scratch": (0, 165, 255),  # Orange
-            "missing_label": (255, 0, 0),  # Blue
-            "wrong_label": (255, 255, 0),  # Cyan
-            "missing_cap": (255, 0, 255),  # Magenta
-            "wrong_cap_color": (0, 255, 255),  # Yellow
+            "cap": (0, 255, 0),        # Green
+            "crumbled": (0, 0, 255),   # Red
+            "label": (255, 0, 0),      # Blue
+            "no-cap": (255, 165, 0),   # Orange
+            "not-crumbled": (0, 255, 255),  # Cyan
         }
         
         for det in detections:
