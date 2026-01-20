@@ -239,53 +239,140 @@ The system uses YOLOv8n (nano) by default, which will download automatically on 
 
 ### Training a Custom Model
 
-To train a custom YOLO model for water bottle defects:
+> **Important**: Custom trained models are not included in this repository (`.gitignore`). If you clone this project, you'll need to train your own model or use the pretrained YOLOv8 model for demonstration.
 
-1. **Collect Dataset**:
-   - Gather images of water bottles with various defects
-   - Include images of normal bottles as well
-   - Aim for at least 100-200 images per defect class
+This project includes two training scripts optimized for different dataset sizes:
 
-2. **Annotate Images**:
-   - Use annotation tools like LabelImg, CVAT, or Roboflow
-   - Annotate bounding boxes for each defect
-   - Classes: crack, scratch, missing_label, wrong_label, missing_cap, wrong_cap_color
+#### Option 1: Standard Training Script (Recommended for 200+ images)
 
-3. **Organize Dataset** (YOLO format):
-   ```
-   dataset/
-     train/
-       images/
-       labels/
-     val/
-       images/
-       labels/
-     data.yaml
-   ```
+Use `train_custom_model.py` for standard datasets:
 
-4. **Train Model**:
-   ```python
-   from ultralytics import YOLO
+**Step 1: Prepare Your Dataset**
+
+Organize your dataset in YOLO format:
+```
+bottle_defect_dataset/
+  ├── images/
+  │   ├── train/          # Training images
+  │   └── val/            # Validation images
+  ├── labels/
+  │   ├── train/          # Training labels (.txt files)
+  │   └── val/            # Validation labels (.txt files)
+  └── data.yaml           # Dataset configuration
+```
+
+**Step 2: Create `data.yaml`**
+
+Create a `data.yaml` file in your dataset directory:
+```yaml
+# Dataset paths (relative to data.yaml location)
+path: .
+train: images/train
+val: images/val
+
+# Number of classes
+nc: 6
+
+# Class names
+names:
+  0: crack
+  1: scratch
+  2: missing_label
+  3: wrong_label
+  4: missing_cap
+  5: wrong_cap_color
+```
+
+**Step 3: Collect and Annotate Images**
+
+1. **Collect Images**: Gather images of water bottles with various defects
+   - Recommended: 100-200+ images per defect class
+   - Include normal bottles and various lighting conditions
+   - Use diverse backgrounds and angles
+
+2. **Annotate Images**: Use annotation tools to label defects
+   - **Roboflow** (recommended): https://roboflow.com - Web-based, easy export to YOLO format
+   - **LabelImg**: https://github.com/heartexlabs/labelImg - Desktop tool
+   - **CVAT**: https://www.cvat.ai - Advanced web-based tool
    
-   # Load pretrained model
-   model = YOLO('yolov8n.pt')
-   
-   # Train
-   model.train(
-       data='dataset/data.yaml',
-       epochs=100,
-       imgsz=640,
-       batch=16,
-       name='bottle_defects'
-   )
-   ```
+3. **Export in YOLO Format**: Ensure labels are in YOLO format (.txt files)
 
-5. **Use Trained Model**:
-   - After training, use `runs/detect/bottle_defects/weights/best.pt`
-   - Update `MODEL_PATH` in `config.py` to point to your trained model
+**Step 4: Run Training**
 
-6. **Update Class Mapping**:
-   - Ensure `DEFECT_CLASSES` in `config.py` matches your training classes
+```bash
+python train_custom_model.py
+```
+
+The script will:
+- Automatically detect your dataset size
+- Configure optimal training parameters (epochs, batch size, augmentation)
+- Train the model with progress updates
+- Save the best model automatically
+
+**Training Output**:
+- Best model: `runs/detect/bottle_defects/weights/best.pt`
+- Last checkpoint: `runs/detect/bottle_defects/weights/last.pt`
+- Training plots: `runs/detect/bottle_defects/results.png`
+
+#### Option 2: Few-Shot Learning (For 10-100 images)
+
+Use `train_fewshot.py` for limited datasets:
+
+```bash
+python train_fewshot.py
+```
+
+This script uses aggressive data augmentation to maximize performance with limited data:
+- Mosaic augmentation (combines 4 images)
+- Mixup augmentation (blends images)
+- Copy-paste augmentation
+- Enhanced color/geometric transformations
+
+#### Step 5: Configure the Application
+
+After training completes, update `config.py`:
+
+```python
+# Update this line with your trained model path
+MODEL_PATH = r"runs/detect/bottle_defects/weights/best.pt"
+
+# Ensure class names match your data.yaml
+DEFECT_CLASSES = {
+    0: "crack",
+    1: "scratch", 
+    2: "missing_label",
+    3: "wrong_label",
+    4: "missing_cap",
+    5: "wrong_cap_color"
+}
+```
+
+#### Step 6: Test Your Model
+
+```bash
+python app.py
+```
+
+Navigate to `http://localhost:5000` and test detection on the Live Detection page.
+
+#### Training Tips
+
+**For Best Results**:
+- Use at least 100 images per class
+- Include variety: different angles, lighting, backgrounds
+- Balance your dataset (similar number of images per class)
+- Use validation set (20% of total images)
+
+**Hardware Recommendations**:
+- **GPU**: NVIDIA GPU with CUDA support (10x faster training)
+- **CPU**: Training possible but slower (1-10 hours depending on dataset)
+- **RAM**: 8GB minimum, 16GB recommended
+
+**Troubleshooting**:
+- If training is slow: Reduce batch size in the script
+- If out of memory: Reduce batch size or image size
+- If poor accuracy: Collect more diverse images, check annotations
+- If overfitting: Increase dataset size or augmentation
 
 ## API Endpoints
 
