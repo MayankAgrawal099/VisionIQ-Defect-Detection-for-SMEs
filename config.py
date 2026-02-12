@@ -6,6 +6,17 @@ Configure camera index, model paths, and detection parameters here.
 import os
 
 # ====================
+# APPLICATION DIRECTORIES (Define early for use in MODEL_PATH)
+# ====================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+LOGS_DIR = os.path.join(BASE_DIR, "logs")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# ====================
 # CAMERA CONFIGURATION
 # ====================
 # IMPORTANT: Configure your external USB webcam index here
@@ -32,7 +43,7 @@ TEST_CAMERAS_ON_STARTUP = False
 #   - "yolov8x.pt" (extra large, most accurate)
 #   - Or path to your custom trained model: "path/to/best.pt"
 # After training, update this to: r"bottle_defect_dataset/runs/detect/bottle_defects/weights/best.pt"
-MODEL_PATH = r"C:\Users\USER\Desktop\Final 2\runs\detect\bottle_defects\weights\best.pt"
+MODEL_PATH = os.path.join(BASE_DIR, "runs", "detect", "bottle_defects", "weights", "best.pt")
 
 # Confidence threshold for detections
 CONFIDENCE_THRESHOLD = 0.5
@@ -87,12 +98,3 @@ FLASK_DEBUG = False
 
 # Video streaming configuration
 STREAM_FPS = 15  # FPS for MJPEG stream (lower = less bandwidth)
-
-# Application directories
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
-LOGS_DIR = os.path.join(BASE_DIR, "logs")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(LOGS_DIR, exist_ok=True)
