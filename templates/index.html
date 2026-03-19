@@ -8,6 +8,12 @@
         <h2>Live Defect Detection</h2>
         <div class="detection-controls-compact">
             <div class="control-group">
+                <div class="camera-select-group">
+                    <select id="cameraSelect" class="camera-select" title="Select camera">
+                        <option value="" disabled selected>Loading cameras…</option>
+                    </select>
+                    <button id="refreshCamerasBtn" class="btn btn-icon" title="Refresh camera list">&#x1F504;</button>
+                </div>
                 <button id="startBtn" class="btn btn-primary">Start Detection</button>
                 <button id="stopBtn" class="btn btn-danger" disabled>Stop Detection</button>
             </div>
@@ -45,7 +51,6 @@
 
 {% block extra_js %}
 <script>
-    // Live detection page JavaScript
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const statusDot = document.getElementById('statusDot');
@@ -53,68 +58,109 @@
     const activeDefects = document.getElementById('activeDefects');
     const totalDetected = document.getElementById('totalDetected');
     const detectionStatus = document.getElementById('detectionStatus');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const refreshCamerasBtn = document.getElementById('refreshCamerasBtn');
 
     let statusCheckInterval = null;
 
-    function updateStatus() {
-        fetch('/api/detection/status')
-            .then(response => response.json())
-            .then(data => {
-                if (data.active) {
-                    statusDot.className = 'status-dot status-active';
-                    statusText.textContent = 'Active';
-                    startBtn.disabled = true;
-                    stopBtn.disabled = false;
-                } else {
-                    statusDot.className = 'status-dot status-inactive';
-                    statusText.textContent = 'Inactive';
-                    startBtn.disabled = false;
-                    stopBtn.disabled = true;
-                }
+    // ── Camera scanning ───────────────────────────────
+    function scanCameras() {
+        cameraSelect.disabled = true;
+        cameraSelect.innerHTML = '<option value="" disabled selected>Scanning…</option>';
+        refreshCamerasBtn.disabled = true;
 
-                activeDefects.textContent = data.stats.current_defects || 0;
-                totalDetected.textContent = data.stats.total_detected || 0;
-                
-                if (data.active) {
-                    detectionStatus.textContent = 'Detecting...';
+        fetch('/api/camera/scan')
+            .then(r => r.json())
+            .then(data => {
+                cameraSelect.innerHTML = '';
+                if (data.cameras && data.cameras.length > 0) {
+                    data.cameras.forEach(idx => {
+                        const opt = document.createElement('option');
+                        opt.value = idx;
+                        opt.textContent = 'Camera ' + idx;
+                        cameraSelect.appendChild(opt);
+                    });
+                    cameraSelect.disabled = false;
                 } else {
-                    detectionStatus.textContent = 'Ready';
+                    cameraSelect.innerHTML = '<option value="" disabled selected>No cameras found</option>';
                 }
             })
-            .catch(error => {
-                console.error('Error fetching status:', error);
+            .catch(() => {
+                cameraSelect.innerHTML = '<option value="" disabled selected>Scan failed</option>';
+            })
+            .finally(() => {
+                refreshCamerasBtn.disabled = false;
             });
     }
 
-    startBtn.addEventListener('click', () => {
-        fetch('/api/detection/start', { method: 'POST' })
-            .then(response => response.json())
+    refreshCamerasBtn.addEventListener('click', scanCameras);
+
+    // ── Status polling ────────────────────────────────
+    function updateStatus() {
+        fetch('/api/detection/status')
+            .then(r => r.json())
             .then(data => {
-                console.log('Detection started:', data);
-                updateStatus();
-                if (!statusCheckInterval) {
-                    statusCheckInterval = setInterval(updateStatus, 1000);
-                }
+                const isActive = data.active;
+                statusDot.className = 'status-dot ' + (isActive ? 'status-active' : 'status-inactive');
+                statusText.textContent = isActive ? 'Active' : 'Inactive';
+                startBtn.disabled = isActive;
+                stopBtn.disabled = !isActive;
+                cameraSelect.disabled = isActive;
+                refreshCamerasBtn.disabled = isActive;
+
+                activeDefects.textContent = data.stats.current_defects || 0;
+                totalDetected.textContent = data.stats.total_detected || 0;
+                detectionStatus.textContent = isActive ? 'Detecting...' : 'Ready';
             })
-            .catch(error => {
-                console.error('Error starting detection:', error);
-                alert('Failed to start detection. Please check console for details.');
-            });
+            .catch(err => console.error('Status error:', err));
+    }
+
+    // ── Start / Stop ──────────────────────────────────
+    startBtn.addEventListener('click', () => {
+        const camIdx = cameraSelect.value;
+        if (!camIdx && camIdx !== 0 && camIdx !== '0') {
+            alert('Please select a camera first.');
+            return;
+        }
+
+        startBtn.disabled = true;
+        detectionStatus.textContent = 'Starting...';
+
+        fetch('/api/detection/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ camera_index: parseInt(camIdx) })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'error') {
+                alert(data.message);
+                startBtn.disabled = false;
+                detectionStatus.textContent = 'Ready';
+                return;
+            }
+            updateStatus();
+            if (!statusCheckInterval) {
+                statusCheckInterval = setInterval(updateStatus, 1000);
+            }
+        })
+        .catch(err => {
+            console.error('Start error:', err);
+            alert('Failed to start detection.');
+            startBtn.disabled = false;
+            detectionStatus.textContent = 'Ready';
+        });
     });
 
     stopBtn.addEventListener('click', () => {
         fetch('/api/detection/stop', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Detection stopped:', data);
-                updateStatus();
-            })
-            .catch(error => {
-                console.error('Error stopping detection:', error);
-            });
+            .then(r => r.json())
+            .then(() => updateStatus())
+            .catch(err => console.error('Stop error:', err));
     });
 
-    // Initial status check
+    // ── Init ──────────────────────────────────────────
+    scanCameras();
     updateStatus();
     statusCheckInterval = setInterval(updateStatus, 1000);
 </script>
