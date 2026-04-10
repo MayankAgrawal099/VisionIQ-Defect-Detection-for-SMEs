@@ -493,5 +493,12 @@ For issues related to:
 - Ensure proper lighting and camera positioning for best results
 - The external USB webcam configuration is critical - always verify the camera index before use
 
-## Author
+---
+
+## 👨‍💻 Author
+
 **Mayank Agrawal**
+
+[![GitHub Profile](https://img.shields.io/badge/GitHub-MayankAgrawal099-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/MayankAgrawal099)
+
+> *If you found this project helpful, please consider giving it a ⭐️!*
