@@ -14,6 +14,8 @@ pymongo==4.6.0
 
 # Utilities
 Pillow==10.1.0
+pygrabber==0.2
+comtypes==1.4.16
 
 # Optional: For better performance
 # torch==2.1.0

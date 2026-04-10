@@ -5,7 +5,7 @@ Provides camera detection, initialization, and frame capture functionality.
 
 import cv2
 import os
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 import config
 from logger import setup_logger
 
@@ -15,26 +15,40 @@ logger = setup_logger(__name__)
 _BACKEND = cv2.CAP_DSHOW if os.name == 'nt' else cv2.CAP_ANY
 
 
-def scan_cameras_fast(max_index: int = 4) -> List[int]:
+def scan_cameras_fast(max_index: int = 4) -> List[Dict]:
     """
-    Quickly probe camera indices and return available ones.
-    Uses DirectShow on Windows for fast, non-blocking probing.
+    Quickly probe camera indices and return available ones with actual names.
+    Uses pygrabber on Windows for precise camera names.
 
     Args:
-        max_index: Maximum camera index to test (inclusive)
+        max_index: Maximum camera index to test (inclusive) for fallback.
 
     Returns:
-        List of available camera indices
+        List of dictionaries containing 'id' and 'name'.
     """
-    available = []
+    cameras = []
+    
+    if os.name == 'nt':
+        try:
+            from pygrabber.dshow_graph import FilterGraph
+            graph = FilterGraph()
+            devices = graph.get_input_devices()
+            for i, name in enumerate(devices):
+                cameras.append({"id": i, "name": name})
+            if cameras:
+                return cameras
+        except Exception as e:
+            logger.warning(f"Could not retrieve camera names using pygrabber: {e}. Falling back to standard OpenCV probe.")
+
+    # Fallback to OpenCV probe
     for i in range(max_index + 1):
         cap = cv2.VideoCapture(i, _BACKEND)
         if cap.isOpened():
             ret, _ = cap.read()
             if ret:
-                available.append(i)
+                cameras.append({"id": i, "name": f"Camera {i}"})
             cap.release()
-    return available
+    return cameras
 
 
 class Camera:

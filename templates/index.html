@@ -74,10 +74,10 @@
             .then(data => {
                 cameraSelect.innerHTML = '';
                 if (data.cameras && data.cameras.length > 0) {
-                    data.cameras.forEach(idx => {
+                    data.cameras.forEach(cam => {
                         const opt = document.createElement('option');
-                        opt.value = idx;
-                        opt.textContent = 'Camera ' + idx;
+                        opt.value = cam.id;
+                        opt.textContent = cam.name;
                         cameraSelect.appendChild(opt);
                     });
                     cameraSelect.disabled = false;
