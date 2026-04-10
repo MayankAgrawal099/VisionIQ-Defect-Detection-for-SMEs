@@ -492,3 +492,6 @@ For issues related to:
 - For production use, train a custom YOLO model with your specific defect classes
 - Ensure proper lighting and camera positioning for best results
 - The external USB webcam configuration is critical - always verify the camera index before use
+
+## Author
+**Mayank Agrawal**
