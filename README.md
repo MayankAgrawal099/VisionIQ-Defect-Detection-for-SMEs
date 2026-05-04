@@ -498,8 +498,9 @@ For issues related to:
 ## 👨‍💻 Author
 
 **Mayank Agrawal**
-**Shripad Kale**
 
 [![GitHub Profile](https://img.shields.io/badge/GitHub-MayankAgrawal099-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/MayankAgrawal099)
+
+**Shripad Kale**
 
 > *If you found this project helpful, please consider giving it a ⭐️!*
