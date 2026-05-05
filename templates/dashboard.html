@@ -36,7 +36,7 @@
         </div>
 
         <div class="dashboard-card">
-            <h3>Defect Trends (24 Hours)</h3>
+            <h3>Defect Trends</h3>
             <div id="defectTrends" class="chart-container">
                 <canvas id="trendsChart"></canvas>
             </div>
@@ -44,6 +44,12 @@
     </div>
 
     <div class="refresh-controls">
+        <select id="timeFilter" class="btn btn-secondary" style="margin-right: 10px; background-color: #2b2b36; color: #e0e0e0; border: 1px solid #444; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer;">
+            <option value="24h">Last 24 Hours</option>
+            <option value="7d">Last 7 Days</option>
+            <option value="30d">Last 30 Days</option>
+            <option value="all">All Time</option>
+        </select>
         <button id="refreshBtn" class="btn btn-primary">Refresh Data</button>
         <span id="lastUpdate" class="last-update"></span>
     </div>
@@ -59,7 +65,8 @@
     let trendsChart = null;
 
     function updateDashboard() {
-        fetch('/api/stats')
+        const timeFilter = document.getElementById('timeFilter').value;
+        fetch(`/api/stats?timeframe=${timeFilter}`)
             .then(response => response.json())
             .then(data => {
                 const stats = data.statistics;
@@ -70,11 +77,14 @@
                 document.getElementById('totalDefects').textContent = stats.total_defects || 0;
                 document.getElementById('recentDefects').textContent = stats.recent_defects || 0;
 
+                // Get consistent labels for both charts
+                const defectLabels = Object.keys(stats.defects_by_type || {});
+
                 // Update defect distribution chart
-                updateDistributionChart(stats.defects_by_type || {});
+                updateDistributionChart(stats.defects_by_type || {}, defectLabels);
 
                 // Update trends chart
-                updateTrendsChart(timeSeries);
+                updateTrendsChart(timeSeries, defectLabels, timeFilter);
 
                 // Update last update time
                 document.getElementById('lastUpdate').textContent = 
@@ -85,11 +95,10 @@
             });
     }
 
-    function updateDistributionChart(data) {
+    function updateDistributionChart(data, labels) {
         const ctx = document.getElementById('distributionChart');
         
-        const labels = Object.keys(data);
-        const values = Object.values(data);
+        const values = labels.map(label => data[label]);
 
         if (distributionChart) {
             distributionChart.data.labels = labels;
@@ -137,30 +146,80 @@
         }
     }
 
-    function updateTrendsChart(data) {
+    function updateTrendsChart(data, labels, timeFilter) {
         const ctx = document.getElementById('trendsChart');
         
-        const labels = data.map(item => item.timestamp);
-        const values = data.map(item => item.count);
+        let timestamps = [];
+        const now = new Date();
+        
+        if (timeFilter === '24h') {
+            now.setMinutes(0, 0, 0);
+            for (let i = 23; i >= 0; i--) {
+                const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+                const ts = d.getFullYear() + '-' + 
+                           String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(d.getDate()).padStart(2, '0') + ' ' + 
+                           String(d.getHours()).padStart(2, '0') + ':00';
+                timestamps.push(ts);
+            }
+        } else if (timeFilter === '7d' || timeFilter === '30d') {
+            const days = timeFilter === '7d' ? 6 : 29;
+            for (let i = days; i >= 0; i--) {
+                const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                const ts = d.getFullYear() + '-' + 
+                           String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(d.getDate()).padStart(2, '0');
+                timestamps.push(ts);
+            }
+        } else {
+            const allTs = [...new Set(data.map(d => d.timestamp))].sort();
+            timestamps = allTs.length > 0 ? allTs : [];
+        }
+        
+        const bgColors = [
+            'rgba(255, 99, 132, 0.2)',
+            'rgba(54, 162, 235, 0.2)',
+            'rgba(255, 206, 86, 0.2)',
+            'rgba(75, 192, 192, 0.2)',
+            'rgba(153, 102, 255, 0.2)',
+            'rgba(255, 159, 64, 0.2)'
+        ];
+        const borderColors = [
+            'rgba(255, 99, 132, 1)',
+            'rgba(54, 162, 235, 1)',
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(153, 102, 255, 1)',
+            'rgba(255, 159, 64, 1)'
+        ];
+
+        const datasets = labels.map((label, index) => {
+            const values = timestamps.map(ts => {
+                const entry = data.find(d => d.timestamp === ts && d.defect_type === label);
+                return entry ? entry.count : 0;
+            });
+
+            return {
+                label: label,
+                data: values,
+                borderColor: borderColors[index % borderColors.length],
+                backgroundColor: bgColors[index % bgColors.length],
+                borderWidth: 2,
+                fill: false,
+                tension: 0.4
+            };
+        });
 
         if (trendsChart) {
-            trendsChart.data.labels = labels;
-            trendsChart.data.datasets[0].data = values;
+            trendsChart.data.labels = timestamps;
+            trendsChart.data.datasets = datasets;
             trendsChart.update();
         } else {
             trendsChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Defects',
-                        data: values,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
+                    labels: timestamps,
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
@@ -197,6 +256,7 @@
     }
 
     document.getElementById('refreshBtn').addEventListener('click', updateDashboard);
+    document.getElementById('timeFilter').addEventListener('change', updateDashboard);
 
     // Initial load
     updateDashboard();

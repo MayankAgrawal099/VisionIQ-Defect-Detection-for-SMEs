@@ -14,12 +14,9 @@
             <label for="defectTypeFilter">Filter by Type:</label>
             <select id="defectTypeFilter">
                 <option value="">All Types</option>
-                <option value="crack">Crack</option>
-                <option value="scratch">Scratch/Mark</option>
-                <option value="missing_label">Missing Label</option>
-                <option value="wrong_label">Wrong Label</option>
-                <option value="missing_cap">Missing Cap</option>
-                <option value="wrong_cap_color">Wrong Cap Color</option>
+                {% for key, value in defect_classes.items() %}
+                <option value="{{ key }}">{{ value }}</option>
+                {% endfor %}
             </select>
         </div>
         <button id="refreshHistoryBtn" class="btn btn-primary">Refresh</button>
@@ -53,16 +50,10 @@
         return date.toLocaleString();
     }
 
+    const defectClassNames = {{ defect_classes | tojson | safe }};
+
     function formatDefectType(type) {
-        const names = {
-            'crack': 'Crack',
-            'scratch': 'Scratch/Mark',
-            'missing_label': 'Missing Label',
-            'wrong_label': 'Wrong Label',
-            'missing_cap': 'Missing Cap',
-            'wrong_cap_color': 'Wrong Cap Color'
-        };
-        return names[type] || type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        return defectClassNames[type] || type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
     function loadDefects(page = 0, defectType = '') {

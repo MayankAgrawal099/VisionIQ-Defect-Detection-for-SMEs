@@ -172,7 +172,7 @@ def dashboard():
 @app.route('/history')
 def history():
     """Defect history page."""
-    return render_template('history.html')
+    return render_template('history.html', defect_classes=config.DEFECT_CLASS_NAMES)
 
 
 @app.route('/video_feed')
@@ -256,9 +256,19 @@ def get_detection_status():
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Get defect detection statistics from database."""
+    timeframe = request.args.get('timeframe', '24h')
+    
+    hours_map = {
+        '24h': 24,
+        '7d': 168,
+        '30d': 720,
+        'all': None
+    }
+    hours = hours_map.get(timeframe, 24)
+
     if db and db.is_connected:
-        stats = db.get_statistics()
-        time_series = db.get_time_series_data(hours=24)
+        stats = db.get_statistics(hours=hours)
+        time_series = db.get_time_series_data(hours=hours)
         return jsonify({"statistics": stats, "time_series": time_series})
     else:
         return jsonify({

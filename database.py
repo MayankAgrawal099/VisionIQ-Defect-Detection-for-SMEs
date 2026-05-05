@@ -193,10 +193,13 @@ class Database:
             logger.error(f"Failed to retrieve defects: {str(e)}")
             return []
     
-    def get_statistics(self) -> Dict:
+    def get_statistics(self, hours: Optional[int] = None) -> Dict:
         """
         Get defect detection statistics.
         
+        Args:
+            hours: Optional number of hours to filter statistics by
+            
         Returns:
             Dictionary with statistics
         """
@@ -209,26 +212,34 @@ class Database:
             }
         
         try:
+            from datetime import timedelta
+            
+            query = {}
+            pipeline = []
+            
+            if hours is not None:
+                start_time = datetime.now() - timedelta(hours=hours)
+                query["timestamp"] = {"$gte": start_time}
+                pipeline.append({"$match": query})
+                
             # Total defects
-            total_defects = self.collection.count_documents({})
+            total_defects = self.collection.count_documents(query)
             
             # Defects by type
-            pipeline = [
+            pipeline.append(
                 {
                     "$group": {
                         "_id": "$defect_type",
                         "count": {"$sum": 1}
                     }
                 }
-            ]
+            )
             defects_by_type = {}
             for result in self.collection.aggregate(pipeline):
                 defect_type = result["_id"]
-                display_name = config.DEFECT_CLASS_NAMES.get(
-                    defect_type,
-                    defect_type.replace("_", " ").title()
-                )
-                defects_by_type[display_name] = result["count"]
+                if defect_type in config.DEFECT_CLASS_NAMES:
+                    display_name = config.DEFECT_CLASS_NAMES[defect_type]
+                    defects_by_type[display_name] = result["count"]
             
             # Recent defects (last 24 hours)
             from datetime import timedelta
@@ -257,12 +268,12 @@ class Database:
                 "recent_defects": 0
             }
     
-    def get_time_series_data(self, hours: int = 24) -> List[Dict]:
+    def get_time_series_data(self, hours: Optional[int] = 24) -> List[Dict]:
         """
         Get defect counts grouped by time intervals.
         
         Args:
-            hours: Number of hours to look back
+            hours: Number of hours to look back, or None for all time
             
         Returns:
             List of time series data points
@@ -272,37 +283,59 @@ class Database:
         
         try:
             from datetime import timedelta
-            start_time = datetime.now() - timedelta(hours=hours)
             
-            # Group by hour
-            pipeline = [
-                {
+            pipeline = []
+            if hours is not None:
+                start_time = datetime.now() - timedelta(hours=hours)
+                pipeline.append({
                     "$match": {
                         "timestamp": {"$gte": start_time}
                     }
-                },
+                })
+            
+            # Grouping dynamically
+            group_id = {
+                "year": {"$year": "$timestamp"},
+                "month": {"$month": "$timestamp"},
+                "day": {"$dayOfMonth": "$timestamp"},
+                "defect_type": "$defect_type"
+            }
+            sort_stage = {"_id.year": 1, "_id.month": 1, "_id.day": 1}
+            
+            if hours is None or hours > 48:
+                pass
+            else:
+                group_id["hour"] = {"$hour": "$timestamp"}
+                sort_stage["_id.hour"] = 1
+                
+            pipeline.extend([
                 {
                     "$group": {
-                        "_id": {
-                            "year": {"$year": "$timestamp"},
-                            "month": {"$month": "$timestamp"},
-                            "day": {"$dayOfMonth": "$timestamp"},
-                            "hour": {"$hour": "$timestamp"}
-                        },
+                        "_id": group_id,
                         "count": {"$sum": 1}
                     }
                 },
                 {
-                    "$sort": {"_id": 1}
+                    "$sort": sort_stage
                 }
-            ]
+            ])
             
             time_series = []
             for result in self.collection.aggregate(pipeline):
-                time_series.append({
-                    "timestamp": f"{result['_id']['year']}-{result['_id']['month']:02d}-{result['_id']['day']:02d} {result['_id']['hour']:02d}:00",
-                    "count": result["count"]
-                })
+                defect_type = result["_id"].get("defect_type")
+                if defect_type in config.DEFECT_CLASS_NAMES:
+                    display_name = config.DEFECT_CLASS_NAMES[defect_type]
+                    
+                    if "hour" in result["_id"]:
+                        timestamp_str = f"{result['_id']['year']}-{result['_id']['month']:02d}-{result['_id']['day']:02d} {result['_id']['hour']:02d}:00"
+                    else:
+                        timestamp_str = f"{result['_id']['year']}-{result['_id']['month']:02d}-{result['_id']['day']:02d}"
+                        
+                    time_series.append({
+                        "timestamp": timestamp_str,
+                        "defect_type": display_name,
+                        "count": result["count"]
+                    })
             
             return time_series
             
