@@ -40,6 +40,9 @@
 {% endblock %}
 
 {% block extra_js %}
+<script id="defect-classes-data" type="application/json">
+    {{ defect_classes | tojson | safe }}
+</script>
 <script>
     // History page JavaScript
     let currentPage = 0;
@@ -50,7 +53,7 @@
         return date.toLocaleString();
     }
 
-    const defectClassNames = {{ defect_classes | tojson | safe }};
+    const defectClassNames = JSON.parse(document.getElementById('defect-classes-data').textContent);
 
     function formatDefectType(type) {
         return defectClassNames[type] || type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
